@@ -32,9 +32,9 @@ struct FrameStatus {
   frame_id_t frame_id_;
   bool evictable_;
   ArcStatus arc_status_;
-  
-  FrameStatus(page_id_t pid, frame_id_t fid, bool ev, ArcStatus st)
-      : page_id_(pid), frame_id_(fid), evictable_(ev), arc_status_(st) {}
+  std::list<frame_id_t>::iterator list_it_; //added list iterator for framestatus
+  FrameStatus(page_id_t pid, frame_id_t fid, bool ev, ArcStatus st, std::list<frame_id_t>::iterator iter) //modify according to iter
+      : page_id_(pid), frame_id_(fid), evictable_(ev), arc_status_(st), list_it_(iter) {}
 };
 
 /**
@@ -46,6 +46,9 @@ class ArcReplacer {
 
   DISALLOW_COPY_AND_MOVE(ArcReplacer);
 
+  /**
+   * @brief Destroys the LRUReplacer.
+   */
   ~ArcReplacer() = default;
 
   auto Evict() -> std::optional<frame_id_t>;
@@ -60,21 +63,21 @@ class ArcReplacer {
   std::list<page_id_t> mru_ghost_;
   std::list<page_id_t> mfu_ghost_;
 
-  /* record entries in mru_ and mfu_ */
+  /* record entries in mru_ and mfu_
+   * this uses frame_id_t to guarantee no duplicate records for the same
+   * frame when they are alive */
   std::unordered_map<frame_id_t, std::shared_ptr<FrameStatus>> alive_map_;
-  
-  /* record entries in mru_ghost_ and mfu_ghost_ */
+  /* record entries in mru_ghost_ and mfu_ghost_
+   * this uses page_id_t but not frame_id_t because page_id is the unique
+   * identifier in ghost lists */
   std::unordered_map<page_id_t, std::shared_ptr<FrameStatus>> ghost_map_;
 
   /* alive, evictable entries count */
   size_t curr_size_{0};
-  
   /* p as in original paper */
-  size_t mru_target_size_{0};
-  
+   size_t mru_target_size_{0};
   /* c as in original paper */
   size_t replacer_size_;
-  
   std::mutex latch_;
 };
 

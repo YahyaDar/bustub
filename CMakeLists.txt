@@ -398,3 +398,12 @@ add_custom_target(submit-p4
 )
 
 add_dependencies(check-clang-tidy gtest bustub) # needs gtest headers, compile_commands.json
+
+if(APPLE AND NOT CMAKE_OSX_SYSROOT)
+  execute_process(
+    COMMAND xcrun --sdk macosx --show-sdk-path
+    OUTPUT_VARIABLE OSX_SDK_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  set(CMAKE_OSX_SYSROOT "${OSX_SDK_PATH}" CACHE PATH "macOS SDK path")
+endif()
