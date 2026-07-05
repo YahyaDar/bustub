@@ -59,6 +59,13 @@ void BPlusTreePage::SetMaxSize(int size) {
  * Generally, min page size == max page size / 2
  * But whether you will take ceil() or floor() depends on your implementation
  */
-auto BPlusTreePage::GetMinSize() const -> int { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+auto BPlusTreePage::GetMinSize() const -> int {
+    if(IsLeafPage) {
+        return max_size_ / 2;
+    }
+
+    // for internal pages
+    return (max_size_ + 1) / 2;
+}
 
 }  // namespace bustub
