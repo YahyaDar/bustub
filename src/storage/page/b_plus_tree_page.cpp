@@ -47,8 +47,12 @@ void BPlusTreePage::ChangeSizeBy(int amount) {
 /*
  * Helper methods to get/set max size (capacity) of the page
  */
-auto BPlusTreePage::GetMaxSize() const -> int { UNIMPLEMENTED("TODO(P2): Add implementation."); }
-void BPlusTreePage::SetMaxSize(int size) { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+auto BPlusTreePage::GetMaxSize() const -> int {
+    return max_size_;
+}
+void BPlusTreePage::SetMaxSize(int size) {
+    max_size_ = size;
+}
 
 /*
  * Helper method to get min page size
