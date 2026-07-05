@@ -33,28 +33,6 @@ class WritePageGuard;
 
 /**
  * @brief A helper class for `BufferPoolManager` that manages a frame of memory and related metadata.
- *
- * This class represents headers for frames of memory that the `BufferPoolManager` stores pages of data into. Note that
- * the actual frames of memory are not stored directly inside a `FrameHeader`, rather the `FrameHeader`s store pointer
- * to the frames and are stored separately them.
- *
- * ---
- *
- * Something that may (or may not) be of interest to you is why the field `data_` is stored as a vector that is
- * allocated on the fly instead of as a direct pointer to some pre-allocated chunk of memory.
- *
- * In a traditional production buffer pool manager, all memory that the buffer pool is intended to manage is allocated
- * in one large contiguous array (think of a very large `malloc` call that allocates several gigabytes of memory up
- * front). This large contiguous block of memory is then divided into contiguous frames. In other words, frames are
- * defined by an offset from the base of the array in page-sized (4 KB) intervals.
- *
- * In BusTub, we instead allocate each frame on its own (via a `std::vector<char>`) in order to easily detect buffer
- * overflow with address sanitizer. Since C++ has no notion of memory safety, it would be very easy to cast a page's
- * data pointer into some large data type and start overwriting other pages of data if they were all contiguous.
- *
- * If you would like to attempt to use more efficient data structures for your buffer pool manager, you are free to do
- * so. However, you will likely benefit significantly from detecting buffer overflow in future projects (especially
- * project 2).
  */
 class FrameHeader {
   friend class BufferPoolManager;
@@ -88,26 +66,13 @@ class FrameHeader {
    */
   std::vector<char> data_;
 
-  /**
-   * TODO(P1): You may add any fields or helper functions under here that you think are necessary.
-   *
-   * One potential optimization you could make is storing an optional page ID of the page that the `FrameHeader` is
-   * currently storing. This might allow you to skip searching for the corresponding (page ID, frame ID) pair somewhere
-   * else in the buffer pool manager...
-   */
-
-   // auto GetFrameID();
+  // Track which page currently resides in this physical frame.
+  // Defaults to INVALID_PAGE_ID if the frame is completely free.
+  page_id_t page_id_{INVALID_PAGE_ID};
 };
 
 /**
  * @brief The declaration of the `BufferPoolManager` class.
- *
- * As stated in the writeup, the buffer pool is responsible for moving physical pages of data back and forth from
- * buffers in main memory to persistent storage. It also behaves as a cache, keeping frequently used pages in memory for
- * faster access, and evicting unused or cold pages back out to storage.
- *
- * Make sure you read the writeup in its entirety before attempting to implement the buffer pool manager. You also need
- * to have completed the implementation of both the `ArcReplacer` and `DiskManager` classes.
  */
 class BufferPoolManager {
  public:
@@ -129,7 +94,7 @@ class BufferPoolManager {
   auto GetPinCount(page_id_t page_id) -> std::optional<size_t>;
 
  private:
-  auto BufferPoolManager::FindFreeFrame(frame_id_t *out_frame_id) -> bool;
+  auto FindFreeFrame(frame_id_t *out_frame_id) -> bool;
 
   /** @brief The number of frames in the buffer pool. */
   const size_t num_frames_;
@@ -139,8 +104,6 @@ class BufferPoolManager {
 
   /**
    * @brief The latch protecting the buffer pool's inner data structures.
-   *
-   * TODO(P1) We recommend replacing this comment with details about what this latch actually protects.
    */
   std::shared_ptr<std::mutex> bpm_latch_;
 
@@ -165,15 +128,5 @@ class BufferPoolManager {
    * Note: Please ignore this for P1.
    */
   LogManager *log_manager_ __attribute__((__unused__));
-
-  /**
-   * TODO(P1): You may add additional private members and helper functions if you find them necessary.
-   *
-   * There will likely be a lot of code duplication between the different modes of accessing a page.
-   *
-   * We would recommend implementing a helper function that returns the ID of a frame that is free and has nothing
-   * stored inside of it. Additionally, you may also want to implement a helper function that returns either a shared
-   * pointer to a `FrameHeader` that already has a page's data stored inside of it, or an index to said `FrameHeader`.
-   */
 };
 }  // namespace bustub
