@@ -34,9 +34,15 @@ void BPlusTreePage::SetPageType(IndexPageType page_type) {
  * Helper methods to get/set size (number of key/value pairs stored in that
  * page)
  */
-auto BPlusTreePage::GetSize() const -> int { UNIMPLEMENTED("TODO(P2): Add implementation."); }
-void BPlusTreePage::SetSize(int size) { UNIMPLEMENTED("TODO(P2): Add implementation."); }
-void BPlusTreePage::ChangeSizeBy(int amount) { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+auto BPlusTreePage::GetSize() const -> int {
+    return size_;
+}
+void BPlusTreePage::SetSize(int size) {
+    size_ = size;
+}
+void BPlusTreePage::ChangeSizeBy(int amount) {
+    size_ += amount;
+}
 
 /*
  * Helper methods to get/set max size (capacity) of the page
