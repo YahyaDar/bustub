@@ -91,6 +91,25 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   }
 
  private:
+  static constexpr int MIN_INTERNAL_PAGE_SIZE = 2;
+
+  auto UpperBound(const KeyType &key, const KeyComparator &comparator) const -> int;
+  auto GetTargetPageIndex(const KeyType &key, const KeyComparator &comparator) const -> int;
+  void InsertInto(int index, const KeyType &key, const ValueType &value);
+
+ public:
+  auto Search(const KeyType &key, const KeyComparator &comparator) const -> ValueType;
+  void Insert(const KeyType &key, const ValueType &value, const KeyComparator &comparator);
+  void Init(const KeyType &key, const ValueType &value1, const ValueType &value2);
+  auto SplitAndInsert(BPlusTreeInternalPage *other, const KeyType &key, const ValueType &value,
+                      const KeyComparator &comparator) -> KeyType;
+  void SearchCurrentAndSibling(const KeyType &key, const KeyComparator &comparator,
+                               page_id_t *current, page_id_t *sibling, int *sibling_index, bool *is_left_sibling);
+  void Remove(size_t index);
+  auto LendToRight(BPlusTreeInternalPage *right, const KeyType &parent_key) -> KeyType;
+  auto LendToLeft(BPlusTreeInternalPage *left, const KeyType &parent_key) -> KeyType;
+  void Merge(BPlusTreeInternalPage *right, const KeyType &parent_key);
+
   // Array members for page data.
   KeyType key_array_[INTERNAL_PAGE_SLOT_CNT];
   ValueType page_id_array_[INTERNAL_PAGE_SLOT_CNT];

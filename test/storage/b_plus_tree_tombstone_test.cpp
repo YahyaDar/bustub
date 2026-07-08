@@ -15,7 +15,7 @@ namespace bustub {
 
 using bustub::DiskManagerUnlimitedMemory;
 
-TEST(BPlusTreeTests, DISABLED_TombstoneBasicTest) {
+TEST(BPlusTreeTests, TombstoneBasicTest) {
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
 
@@ -42,6 +42,7 @@ TEST(BPlusTreeTests, DISABLED_TombstoneBasicTest) {
 
   // Test tombstones are being used / affect the index iterator correctly
 
+  std::cout << "Tree BEFORE deletions in BasicTest:\n" << tree.DrawBPlusTree() << std::endl;
   std::vector<int64_t> to_delete = {1, 5, 9};
   for (auto i : to_delete) {
     index_key.SetFromInteger(i);
@@ -155,7 +156,7 @@ TEST(BPlusTreeTests, DISABLED_TombstoneBasicTest) {
   delete disk_manager;
 }
 
-TEST(BPlusTreeTests, DISABLED_TombstoneSplitTest) {
+TEST(BPlusTreeTests, TombstoneSplitTest) {
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
 
@@ -217,7 +218,7 @@ TEST(BPlusTreeTests, DISABLED_TombstoneSplitTest) {
   delete disk_manager;
 }
 
-TEST(BPlusTreeTests, DISABLED_TombstoneBorrowTest) {
+TEST(BPlusTreeTests, TombstoneBorrowTest) {
   using LeafPage = BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>, 1>;
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
@@ -257,8 +258,11 @@ TEST(BPlusTreeTests, DISABLED_TombstoneBorrowTest) {
     to_remove.push_back(right_page->KeyAt(0));
   }
 
+  std::cout << "Tree BEFORE removes:\n" << tree.DrawBPlusTree() << std::endl;
   for (auto k : to_remove) {
+    std::cout << "Removing: " << k.GetAsInteger() << std::endl;
     tree.Remove(k);
+    std::cout << "Tree AFTER removing " << k.GetAsInteger() << ":\n" << tree.DrawBPlusTree() << std::endl;
   }
 
   std::vector<int64_t> tombstones;
@@ -271,6 +275,10 @@ TEST(BPlusTreeTests, DISABLED_TombstoneBorrowTest) {
     ++leaf;
   }
 
+  for (auto t : tombstones) {
+    std::cout << "tombstone: " << t << std::endl;
+  }
+  std::cout << "to_remove[0]: " << to_remove[0].GetAsInteger() << std::endl;
   EXPECT_EQ(tombstones.size(), 1);
   EXPECT_EQ(tombstones[0], to_remove[0].GetAsInteger());
 
@@ -278,7 +286,7 @@ TEST(BPlusTreeTests, DISABLED_TombstoneBorrowTest) {
   delete disk_manager;
 }
 
-TEST(BPlusTreeTests, DISABLED_TombstoneCoalesceTest) {
+TEST(BPlusTreeTests, TombstoneCoalesceTest) {
   using LeafPage = BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>, 2>;
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
@@ -369,6 +377,34 @@ TEST(BPlusTreeTests, DISABLED_TombstoneCoalesceTest) {
   ASSERT_EQ(root_page->IsLeafPage(), true);
 
   auto tombstones = root_page->GetTombstones();
+  std::cout << "tombstones: ";
+  for (auto t : tombstones) {
+    std::cout << t.GetAsInteger() << " ";
+  }
+  std::cout << std::endl;
+  
+  std::cout << "to_del_from_smaller_page: ";
+  for (auto t : to_del_from_smaller_page) {
+    std::cout << t.GetAsInteger() << " ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "to_del_from_larger_page: ";
+  for (auto t : to_del_from_larger_page) {
+    std::cout << t.GetAsInteger() << " ";
+  }
+  std::cout << std::endl;
+  
+  std::cout << "Tree after all deletions in CoalesceTest:\n" << tree.DrawBPlusTree() << std::endl;
+  
+  auto tombstones = root_page->GetTombstones();
+  std::cout << "tombstones size: " << tombstones.size() << std::endl;
+  std::cout << "tombstones: ";
+  for (auto t : tombstones) {
+    std::cout << t.GetAsInteger() << " ";
+  }
+  std::cout << std::endl;
+  
   EXPECT_EQ(tombstones.size(), 2);
 
   // final set of tombstones should either be the last two keys logically
@@ -377,8 +413,13 @@ TEST(BPlusTreeTests, DISABLED_TombstoneCoalesceTest) {
   bool eq_to_smaller_page = true;
   bool eq_to_larger_page = true;
   for (int i = 0; i < 2; i++) {
-    eq_to_smaller_page &= tombstones[i].GetAsInteger() == to_del_from_smaller_page[1 + i].GetAsInteger();
-    eq_to_larger_page &= tombstones[i].GetAsInteger() == to_del_from_larger_page[1 + i].GetAsInteger();
+    if (i < tombstones.size()) {
+      eq_to_smaller_page &= tombstones[i].GetAsInteger() == to_del_from_smaller_page[1 + i].GetAsInteger();
+      eq_to_larger_page &= tombstones[i].GetAsInteger() == to_del_from_larger_page[1 + i].GetAsInteger();
+    } else {
+      eq_to_smaller_page = false;
+      eq_to_larger_page = false;
+    }
   }
 
   ASSERT_EQ(!eq_to_smaller_page || !eq_to_larger_page, true);

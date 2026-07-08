@@ -60,12 +60,27 @@ void BPlusTreePage::SetMaxSize(int size) {
  * But whether you will take ceil() or floor() depends on your implementation
  */
 auto BPlusTreePage::GetMinSize() const -> int {
-    if(IsLeafPage) {
-        return max_size_ / 2;
-    }
-
-    // for internal pages
+    // ceiling form: ceil(max_size / 2)
     return (max_size_ + 1) / 2;
+}
+
+auto BPlusTreePage::CanReleaseAncestor(bool insert) const -> bool {
+    if (insert) {
+        return !IsFull();
+    }
+    return GetSize() > GetMinSize();
+}
+
+auto BPlusTreePage::IsFull() const -> bool {
+    return size_ >= max_size_;
+}
+
+auto BPlusTreePage::CanLendAKey() const -> bool {
+    return GetSize() > GetMinSize();
+}
+
+auto BPlusTreePage::Underflow() const -> bool {
+    return GetSize() < GetMinSize();
 }
 
 }  // namespace bustub

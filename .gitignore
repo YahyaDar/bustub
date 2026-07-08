@@ -247,3 +247,7 @@ docs/dev
 
 # LLM Stuff
 .aider*
+
+build/
+docs/
+test/storage/b_plus_tree_debug_test.cpp

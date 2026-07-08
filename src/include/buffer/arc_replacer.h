@@ -32,9 +32,9 @@ struct FrameStatus {
   frame_id_t frame_id_;
   bool evictable_;
   ArcStatus arc_status_;
-  std::list<frame_id_t>::iterator list_it_; //added list iterator for framestatus
-  FrameStatus(page_id_t pid, frame_id_t fid, bool ev, ArcStatus st, std::list<frame_id_t>::iterator iter) //modify according to iter
-      : page_id_(pid), frame_id_(fid), evictable_(ev), arc_status_(st), list_it_(iter) {}
+
+  FrameStatus(page_id_t pid, frame_id_t fid, bool ev, ArcStatus st)
+      : page_id_(pid), frame_id_(fid), evictable_(ev), arc_status_(st) {}
 };
 
 /**
@@ -58,19 +58,31 @@ class ArcReplacer {
   auto Size() -> size_t;
 
  private:
-  std::list<frame_id_t> mru_;
-  std::list<frame_id_t> mfu_;
-  std::list<page_id_t> mru_ghost_;
-  std::list<page_id_t> mfu_ghost_;
+  using AliveList = std::list<std::shared_ptr<FrameStatus>>;
+  using GhostList = std::list<std::shared_ptr<FrameStatus>>;
+  using AliveIter = AliveList::iterator;
+  using GhostIter = GhostList::iterator;
+
+  auto GetVictim() -> AliveIter;
+  auto MoveVictimToGhost(AliveIter victim_it) -> frame_id_t;
+  void IncreaseTargetSize(int64_t delta);
+  void RecordAccessAlive(frame_id_t frame_id, page_id_t page_id);
+  void RecordAccessGhost(frame_id_t frame_id, page_id_t page_id);
+  void RecordAccessNew(frame_id_t frame_id, page_id_t page_id);
+
+  AliveList mru_;
+  AliveList mfu_;
+  GhostList mru_ghost_;
+  GhostList mfu_ghost_;
 
   /* record entries in mru_ and mfu_
    * this uses frame_id_t to guarantee no duplicate records for the same
    * frame when they are alive */
-  std::unordered_map<frame_id_t, std::shared_ptr<FrameStatus>> alive_map_;
+  std::unordered_map<frame_id_t, AliveIter> alive_map_;
   /* record entries in mru_ghost_ and mfu_ghost_
    * this uses page_id_t but not frame_id_t because page_id is the unique
    * identifier in ghost lists */
-  std::unordered_map<page_id_t, std::shared_ptr<FrameStatus>> ghost_map_;
+  std::unordered_map<page_id_t, GhostIter> ghost_map_;
 
   /* alive, evictable entries count */
   size_t curr_size_{0};

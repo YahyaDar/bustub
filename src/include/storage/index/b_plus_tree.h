@@ -69,6 +69,27 @@ class Context {
   auto IsRootPage(page_id_t page_id) -> bool { return page_id == root_page_id_; }
 };
 
+enum class BPlusTreeOpStatus {
+  Success,
+  Duplicate,
+  NotFound,
+  OptimisticLockFailed,
+};
+
+template <typename KeyType>
+struct BPlusTreeInsertRet {
+  BPlusTreeOpStatus status_{BPlusTreeOpStatus::Success};
+  bool split_{false};
+  page_id_t new_page_id_{INVALID_PAGE_ID};
+  KeyType split_key_;
+};
+
+template <typename KeyType>
+struct BPlusTreeDeleteRet {
+  BPlusTreeOpStatus status_{BPlusTreeOpStatus::Success};
+  page_id_t deleted_page_id_{INVALID_PAGE_ID};
+};
+
 #define BPLUSTREE_TYPE BPlusTree<KeyType, ValueType, KeyComparator, NumTombs>
 
 // Main class providing the API for the Interactive B+ Tree.
@@ -122,11 +143,39 @@ class BPlusTree {
   std::shared_ptr<TracedBufferPoolManager> bpm_;
 
  private:
+
   void ToGraph(page_id_t page_id, const BPlusTreePage *page, std::ofstream &out);
 
   void PrintTree(page_id_t page_id, const BPlusTreePage *page);
 
   auto ToPrintableBPlusTree(page_id_t root_id) -> PrintableBPlusTree;
+
+  // Search helper
+  auto Lookup(Context &ctx, const KeyType &key, page_id_t page_id) -> std::optional<ValueType>;
+
+  // Insert helpers
+  void InsertRecursive(Context &ctx, const KeyType &key, const ValueType &value,
+                       page_id_t page_id, BPlusTreeInsertRet<KeyType> &ret, bool optimistic);
+  void InsertIntoLeafPage(LeafPage *leaf, const KeyType &key, const ValueType &value,
+                          BPlusTreeInsertRet<KeyType> &ret, bool optimistic);
+  void InsertIntoInternalPage(InternalPage *internal, const KeyType &key, page_id_t child_id,
+                              BPlusTreeInsertRet<KeyType> &ret);
+  void SplitRootPage(BPlusTreeHeaderPage *header, page_id_t old_root_id,
+                     const KeyType &split_key, page_id_t new_right_id);
+
+  // Delete helpers
+  void RemoveRecursive(Context &ctx, const KeyType &key, page_id_t page_id,
+                       BPlusTreeDeleteRet<KeyType> &ret, bool optimistic);
+  void DeleteFromLeafPage(LeafPage *leaf, const KeyType &key,
+                          BPlusTreeDeleteRet<KeyType> &ret, bool optimistic, page_id_t page_id);
+  void DeleteFromInternalPage(InternalPage *internal, size_t index,
+                              BPlusTreeDeleteRet<KeyType> &ret, page_id_t page_id);
+
+  // Iterator helper
+  auto GetIterator(const std::optional<KeyType> &&key) -> INDEXITERATOR_TYPE;
+
+  // Placeholder for root tracking in delete
+  page_id_t ctx_root_page_id_placeholder_{INVALID_PAGE_ID};
 
   // member variable
   std::string index_name_;

@@ -12,7 +12,9 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -110,6 +112,33 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   }
 
  private:
+  void Overwrite(size_t index, const ValueType &value);
+  void InsertInto(size_t index, const KeyType &key, const ValueType &value);
+  void Clean(std::unordered_set<size_t> &to_remove);
+  void SplitTombstones(BPlusTreeLeafPage *other, int split_point);
+
+ public:
+  auto Exist(const KeyType &key, const KeyComparator &comparator) const -> bool;
+  auto LookupIndex(const KeyType &key, const KeyComparator &comparator) const -> std::optional<size_t>;
+  auto Lookup(const KeyType &key, const KeyComparator &comparator) const -> std::optional<ValueType>;
+  auto GetLowerBoundIndex(const KeyType &key, const KeyComparator &comparator) const -> std::optional<int>;
+  auto Next(int index) const -> std::optional<int>;
+  auto InTombstone(size_t index) const -> bool;
+
+  void Insert(const KeyType &key, const ValueType &value, const KeyComparator &comparator);
+  void Remove(size_t index);
+  void CleanTombstones();
+  void SoftRemove(const KeyType &key, const KeyComparator &comparator);
+  auto CanSafeRemove() const -> bool;
+  auto Underflow() const -> bool;
+
+  void Split(BPlusTreeLeafPage *other);
+  auto LendToRight(BPlusTreeLeafPage *right) -> KeyType;
+  auto LendToLeft(BPlusTreeLeafPage *left) -> KeyType;
+  void Merge(BPlusTreeLeafPage *right);
+
+  auto ValueAt(int index) const -> ValueType;
+
   page_id_t next_page_id_;
   size_t num_tombstones_;
   // Fixed-size tombstone buffer (indexes into key_array_ / rid_array_).
